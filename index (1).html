@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volunteer Services Dashboard · Elsa Bakoup</title>
+<meta name="description" content="Interactive dashboard on volunteer capacity vs. service demand, Sep 2025–Apr 2026. A personal data project by Elsa Bakoup.">
+<meta name="author" content="Elsa Bakoup">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23003d4d'/%3E%3Crect x='14' y='34' width='8' height='16' rx='2' fill='%2378be21'/%3E%3Crect x='28' y='22' width='8' height='28' rx='2' fill='%2378be21'/%3E%3Crect x='42' y='28' width='8' height='22' rx='2' fill='%23f56600'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Volunteer capacity vs. service demand">
+<meta property="og:description" content="When are volunteer services busiest, and who stays? An interactive dashboard built with SQL and Power BI. Personal project by Elsa Bakoup.">
+<meta property="og:image" content="og-image.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Volunteer capacity vs. service demand">
+<meta name="twitter:description" content="Interactive dashboard · personal data project by Elsa Bakoup">
+<meta name="twitter:image" content="og-image.png">
+<meta name="theme-color" content="#003d4d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a students' union operations report: plain, confident, exact
+   IDEA: a printed service report with a top tab bar; every chart filters the others
+   PICTURE: per view, a petrol hero figure and one large chart lead; the rest support it
+   COLOUR and TYPE: SU palette - dark teal bar, petrol data, SU orange contrast, lime accent, warm grey lines; DM Sans
+   LAYOUT: top bar, then a one-screen grid per view at every desktop or panel size; stacks only on phones */
+:root{color-scheme:light;
+  --page:#f6f4f2;--surface:#fff;--surface2:#fff;--ink:#0d1214;--ink2:#4a4542;--muted:#7d7671;--grid:#e7e2de;--line:#e2dcd7;--wash:#efebe8;
+  --bar:#003d4d;--barink:#ffffff;--barmute:#9fc0c9;--lime:#78be21;--hero:#004d69;
+  --s1:#00739e;--s2:#f56600;--up:#f56600;--down:#00739e;--upink:#b84d00;--downink:#00648a;
+  --tagup:#fde9da;--tagupink:#a34400;--taggood:#eaf4dc;--taggoodink:#3d6d0a;--tagn:#efebe8;--tagnink:#4a4542;
+  --q1:#003d4d;--q2:#004d69;--q3:#2f7d9c;--q4:#7aa8bb;--recbg:#003d4d;--dim:.3;--grey:#b4aca6;--greyink:#2b2725}
+:root[data-theme=dark]{color-scheme:dark;
+  --page:#0d1416;--surface:#141e21;--surface2:#1b282c;--ink:#eef2f1;--ink2:#c4cbca;--muted:#8d9796;--grid:#233236;--line:#26363a;--wash:#1b282c;
+  --bar:#002a35;--barmute:#86aab4;--hero:#0b4a63;
+  --s1:#3b93c0;--s2:#e8651a;--up:#e8651a;--down:#3b93c0;--upink:#ff9a5c;--downink:#7cc0e3;
+  --tagup:#3a2414;--tagupink:#ffa266;--taggood:#1f2f12;--taggoodink:#a6dc6a;--tagn:#1f2b2e;--tagnink:#c4cbca;
+  --q1:#a8d4e6;--q2:#6db6d6;--q3:#3b93c0;--q4:#2a6f93;--recbg:#0b3a4d;--grey:#9a928c;--greyink:#1a1716}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;
+  --page:#0d1416;--surface:#141e21;--surface2:#1b282c;--ink:#eef2f1;--ink2:#c4cbca;--muted:#8d9796;--grid:#233236;--line:#26363a;--wash:#1b282c;
+  --bar:#002a35;--barmute:#86aab4;--hero:#0b4a63;
+  --s1:#3b93c0;--s2:#e8651a;--up:#e8651a;--down:#3b93c0;--upink:#ff9a5c;--downink:#7cc0e3;
+  --tagup:#3a2414;--tagupink:#ffa266;--taggood:#1f2f12;--taggoodink:#a6dc6a;--tagn:#1f2b2e;--tagnink:#c4cbca;
+  --q1:#a8d4e6;--q2:#6db6d6;--q3:#3b93c0;--q4:#2a6f93;--recbg:#0b3a4d;--grey:#9a928c;--greyink:#1a1716}}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 "DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+.bar{background:var(--bar);color:var(--barink);display:flex;align-items:stretch;gap:clamp(12px,2.4vw,36px);padding:0 clamp(14px,2.2vw,32px);flex:none;min-height:52px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15.5px;white-space:nowrap}
+.brand i{width:28px;height:28px;border-radius:6px;background:var(--lime);display:grid;place-items:center;font-style:normal;color:#0d1214;font-weight:800;font-size:13px}
+.tabs{display:flex;gap:2px}
+.tabs button{font:inherit;font-size:14px;font-weight:600;color:var(--barmute);background:none;border:0;border-bottom:3px solid transparent;padding:0 14px;cursor:pointer;display:flex;align-items:center;gap:7px}
+.tabs button svg{width:17px;height:17px}
+.tabs button[aria-selected=true]{color:#fff;border-bottom-color:var(--lime)}
+.tabs button:hover{color:#fff}
+.ctl{display:flex;gap:8px;align-items:center;margin-left:auto;flex:none}
+button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.btn{border-radius:6px;padding:0 12px;min-height:34px;font:inherit;font-size:13px;font-weight:600;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;display:inline-flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
+.btn svg{width:15px;height:15px}
+.btn.pri{background:var(--lime);border-color:var(--lime);color:#0d1214}
+.chip{background:rgba(255,255,255,.12);border-color:transparent}
+.chip[hidden]{display:none}
+main{flex:1;min-height:0;padding:16px clamp(14px,2.2vw,32px) 12px;overflow:hidden}
+.view{height:100%;display:none;gap:14px}
+.view.on{display:grid}
+#overview,#volunteers{grid-template-rows:auto auto minmax(0,1.35fr) minmax(0,1fr)}
+#demand{grid-template-rows:auto minmax(0,1fr) minmax(0,1fr)}
+.top{display:flex;align-items:baseline;gap:6px 14px;flex-wrap:wrap}
+.eyebrow{display:none}
+h1{font-size:clamp(21px,2.1vw,28px);line-height:1.1;margin:0;letter-spacing:-.015em;font-weight:700}
+h1 span{font-weight:700}
+.period{font-size:12px;font-weight:600;color:var(--ink2);border:1px solid var(--line);border-radius:4px;padding:2px 7px;white-space:nowrap}
+.sub{margin:0;color:var(--ink2);font-size:13.5px;flex-basis:100%}
+.row{display:grid;gap:14px}
+.kpis{grid-template-columns:1.3fr 1fr 1fr 1fr}
+.card{background:var(--surface);border-radius:10px;border:1px solid var(--line)}
+.kpi{padding:12px 16px;display:flex;flex-direction:column;gap:3px;min-height:clamp(84px,13vh,120px);position:relative;overflow:hidden}
+.kpi .k{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink2)}
+.ic{display:none}
+.kpi .v{font-size:clamp(24px,2.5vw,34px);font-weight:800;letter-spacing:-.02em;line-height:1.05;font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:14px;font-weight:600;color:var(--muted);letter-spacing:0}
+.kpi .d{font-size:12.5px;color:var(--ink2);display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:12px;padding:1px 7px;border-radius:4px;white-space:nowrap;background:var(--tagn);color:var(--tagnink)}
+.p-up{background:var(--tagup);color:var(--tagupink)}.p-good{background:var(--taggood);color:var(--taggoodink)}.p-acc{background:var(--tagn);color:var(--tagnink)}
+.hero{background:var(--hero);color:#fff;border:0}
+.hero .k,.hero .d{color:#cfe3ea}.hero .v small{color:#a9cbd7}.hero .pill{background:var(--lime);color:#0d1214}
+.hero svg.spark{position:absolute;right:16px;top:14px;width:38%;height:52%}
+.box{padding:12px 16px 10px;display:flex;flex-direction:column;min-height:0}
+.bh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.bh h2{font-size:15px;margin:0;font-weight:700;line-height:1.25}
+.bh p{margin:2px 0 0;color:var(--muted);font-size:12.5px;line-height:1.35}
+.leg{display:flex;gap:12px;font-size:12px;color:var(--ink2);flex:none;padding-top:2px}
+.leg i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:5px;vertical-align:3px}
+.seg{display:inline-flex;gap:2px;flex:none;border-bottom:1px solid var(--line)}
+.seg button{font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:0 8px;min-height:28px;cursor:pointer}
+.seg button[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--s1)}
+.fig{position:relative;flex:1;min-height:110px;margin-top:6px}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+svg text{font-family:inherit;fill:var(--muted);font-size:11.5px}
+svg .lab{fill:var(--ink);font-weight:700;font-size:12px}
+.c2{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+.c2e{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.c3{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.1fr)}
+.bars{flex:1;display:flex;flex-direction:column;justify-content:space-around;margin-top:6px;min-height:0}
+.br{display:grid;grid-template-columns:minmax(64px,.6fr) minmax(0,2fr) 52px;align-items:center;gap:10px;border:0;background:none;font:inherit;color:var(--ink);padding:3px 4px;border-radius:6px;text-align:left;cursor:pointer;transition:opacity .15s}
+.br:hover{background:var(--wash)}
+.br.dim{opacity:var(--dim)}
+.br .t{height:10px;border-radius:2px;background:var(--wash);overflow:hidden;display:flex}
+.br .t i{display:block;height:100%;border-radius:2px;transition:width .3s}
+.br b{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+.dv .t{background:none;position:relative;border-radius:0}
+.dv .t::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--muted)}
+.dv .t i{position:absolute;top:0}
+.dv .lbl{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.st .t{height:16px;gap:2px;background:none}.st .t i{border-radius:2px;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.gr .t{flex-direction:column;gap:3px;height:auto;background:none;border-radius:0}.gr .t i{height:8px;border-radius:2px}
+.gr b{font-size:12px;line-height:1.2}
+.list{display:flex;flex-direction:column;justify-content:space-around;flex:1;margin-top:4px}
+.li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--grid)}
+.li:last-child{border:0}.li>div{flex:1}.li .pill{flex:none}
+.li strong{display:block;font-size:13.5px}.li span{color:var(--ink2);font-size:12.5px}
+.li .pill{font-size:12.5px;padding:3px 9px}
+@media (min-width:601px) and (max-width:1150px) and (max-height:700px),(min-width:601px) and (max-height:600px){.li div span{display:none}}
+@media (min-width:601px) and (max-height:820px){.bar{min-height:46px}.tabs button{font-size:13.5px}}
+@media (min-width:601px) and (max-height:600px){.rec p.txt{font-size:12.5px;line-height:1.4;margin-top:4px}.rec h2{font-size:14px}}
+.rec{background:var(--recbg);border:0;color:#fff}
+.rec h2{color:var(--lime)}
+.rec p.txt{font-size:14px;line-height:1.5;margin:8px 0 0;color:#fff}
+.rec p.txt b{color:#fff}
+.rec .note{margin:6px 0 0;font-size:11.5px;color:#9fc0c9}
+.rec h2{color:var(--lime);font-size:13px;font-weight:700}
+.rhead{font-size:clamp(17px,1.6vw,21px);font-weight:700;line-height:1.2;margin:2px 0 0;color:#fff;letter-spacing:-.01em}
+.acts{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:6px;margin-top:8px;min-height:0}
+.act{display:flex;gap:11px;align-items:center}
+.ai{width:30px;height:30px;border-radius:8px;background:rgba(120,190,33,.18);color:var(--lime);display:grid;place-items:center;flex:none}.ai svg{width:16px;height:16px}
+.act strong{display:block;font-size:13.5px;color:#fff;line-height:1.25}.act div span{font-size:12.5px;color:#a9cbd7}
+@media (min-width:601px) and (max-height:700px){.rec .note{display:none}.act div span{display:none}.ai{width:26px;height:26px}.rhead{font-size:16px}}
+@media (min-width:601px) and (max-height:560px){.rhead{display:none}.acts{margin-top:4px}}
+@media (min-width:601px) and (max-height:640px){.rhead{font-size:14.5px}.ai{width:22px;height:22px}.ai svg{width:13px;height:13px}.act{gap:8px}.act strong{font-size:12.5px}.acts{margin-top:4px;gap:2px}.rec h2{font-size:12px}}
+@media (min-width:601px) and (max-height:520px){.ai{display:none}}
+@media (min-width:601px) and (max-width:960px) and (max-height:640px){.rhead{display:none}}
+.meter{height:6px;border-radius:2px;background:rgba(255,255,255,.22);overflow:hidden;margin-top:4px;width:min(260px,100%)}
+.meter i{display:block;height:100%;background:var(--lime);border-radius:2px;transition:width .3s}
+.split{display:flex;height:10px;gap:2px;margin-top:6px}.split i{border-radius:2px}
+.foot{font-size:11.5px;color:var(--muted);margin:6px 0 0}
+#tip{position:fixed;pointer-events:none;background:var(--bar);color:#fff;font-size:12.5px;padding:7px 10px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:9;white-space:nowrap;border-left:3px solid var(--lime)}
+#tip b{display:block}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bar);color:#fff;padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+@media (min-width:601px) and (max-height:820px){
+  main{padding-top:12px;padding-bottom:10px}.view{gap:10px}.row{gap:10px}
+  #overview,#volunteers{grid-template-rows:auto auto minmax(0,1.2fr) minmax(0,1fr)}
+  .eyebrow{font-size:11px}h1{font-size:clamp(20px,2vw,26px);margin:1px 0 2px}.sub{font-size:12.5px}
+  .kpi{min-height:0;padding:9px 16px;gap:2px}.kpi .v{font-size:clamp(22px,2.1vw,28px)}.kpi .k{font-size:12.5px}.ic{width:22px;height:22px}
+  .box{padding:10px 16px 8px}.bh h2{font-size:14.5px}.bh p{font-size:12px}
+  .nosub .bh p{display:none}
+  .li{padding:3px 0}.li strong{font-size:13px}.li span{font-size:12px}.li .pill{font-size:12px;padding:2px 8px}
+  .rec p.txt{font-size:13px;margin-top:4px}.rec .note{font-size:11px}
+  .br{padding:1px 4px}.gr .t i{height:7px}.gr b{font-size:11px;line-height:1.15}
+  .btn{min-height:32px}.foot{display:none}}
+/* narrow windows (e.g. a side panel): keep the grid, shrink chrome */
+@media (max-width:1150px){
+  .tabs button{padding:0 9px}.brand span{display:none}
+  .btn span,.chip span{display:none}.btn{padding:0 10px}
+  .kpi .k{font-size:12px}.kpi .d{font-size:11.5px}.kpi .v{font-size:clamp(20px,2.6vw,28px)}
+  .hero svg.spark{display:none}
+  .seg button{padding:0 7px;font-size:11.5px}.leg{font-size:11px;gap:8px}
+  .br{grid-template-columns:minmax(54px,.55fr) minmax(0,2fr) 46px;gap:7px;font-size:12.5px}}
+@media (max-width:960px){
+  .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .kpi .d .pill+*{display:none}
+  .c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .bh{flex-wrap:wrap;gap:4px}.bh h2{font-size:13.5px}
+  .c2{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}}
+/* short windows */
+@media (min-width:601px) and (max-height:640px){
+  .sub{display:none}h1{font-size:clamp(18px,2vw,22px);margin:0}
+  .bh p{display:none}.rec .note{display:none}
+  .kpi{padding:7px 14px}.kpi .v{font-size:clamp(18px,2vw,24px)}.ic{display:none}
+  .view,.row{gap:8px}main{padding-top:8px;padding-bottom:8px}.box{padding:8px 14px 6px}
+  .fig{min-height:60px}.leg{margin-top:2px!important}
+  .br{padding:0 4px;line-height:1.15;font-size:12px}.br b{font-size:12px}.dv .lbl{font-size:11px}
+  .gr .t{gap:2px}.gr .t i{height:6px}.gr b{font-size:10.5px;line-height:1.05}
+  .rec p.txt{font-size:12.5px;line-height:1.4}.li{padding:2px 0}}
+@media (min-width:601px) and (max-height:520px){
+  .kpi .d{display:none}.split,#hygLeg{display:none}.leg{display:none}.li div span{display:none}
+  .br{font-size:11px;line-height:1.05}.br b,.dv .lbl{font-size:10.5px}.br .t{height:8px}.st .t{height:12px}.st .t i{font-size:9.5px}
+  .gr .t i{height:5px}.gr b{font-size:9.5px;line-height:1}.rec h2{font-size:14px}.rec p.txt{font-size:12px;line-height:1.35}
+  .seg button{min-height:22px}.bh h2{font-size:13px}.kpi{min-height:0;padding:6px 12px}}
+/* phones: one column, scrolling is unavoidable */
+@media (max-width:600px){
+  body{display:block;overflow:auto;height:auto}html{height:auto}
+  .bar{flex-wrap:wrap;position:sticky;top:0;z-index:5;padding-bottom:6px}.brand{padding:8px 0}.tabs{order:3;width:100%}.tabs button{min-height:40px;flex:1;justify-content:center}
+  main{height:auto;overflow:visible}.view{height:auto}
+  .kpis{grid-template-columns:1fr 1fr}.c2,.c2e,.c3{grid-template-columns:minmax(0,1fr)}
+  .fig{min-height:220px}.box{min-height:240px}}
+
+
+#about{grid-template-rows:auto minmax(0,1fr) minmax(0,1fr)}
+.ab{grid-template-columns:repeat(3,minmax(0,1fr))}.ab2{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr)}
+#about .box{overflow:auto;gap:6px}
+#about h2{font-size:15px;margin:0;font-weight:700}
+#about ul{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--ink2)}
+#about li b{color:var(--ink)}
+#about .q{margin:0;font-size:16px;font-weight:700;line-height:1.3}
+#about .mini{margin:auto 0 0;font-size:12px;color:var(--muted)}
+.ab-me .who{font-size:clamp(24px,2.6vw,34px);font-weight:800;letter-spacing:-.02em;line-height:1.05;margin:2px 0 4px}
+.ab-me p{margin:0;color:#cfe3ea;font-size:13.5px;line-height:1.45}
+.ab-me .disc{margin-top:auto;font-size:12px;color:#a9cbd7;border-top:1px solid rgba(255,255,255,.18);padding-top:8px}
+@media (max-width:960px){#about ul{font-size:12px}}
+@media (min-width:601px) and (max-height:700px){#about ul{font-size:12px;gap:1px}#about .q{font-size:14px}.ab-me p{font-size:12.5px}}
+@media (min-width:601px) and (max-width:960px),(min-width:601px) and (max-height:640px){
+  #about .mini,#about .sub{display:none}#about ul{font-size:11.5px;line-height:1.3;gap:1px;padding-left:14px}#about h2{font-size:13.5px}
+  #about .q{font-size:13px}.ab-me p{font-size:11.5px;line-height:1.35}.ab-me .disc{font-size:11px;padding-top:5px}.ab-me .who{font-size:22px}#about .box{gap:3px;padding:8px 12px}#about .row{gap:8px}}
+@media (min-width:601px) and (max-width:820px) and (max-height:560px){#about ul{font-size:11px}}
+@media (max-width:600px){.ab,.ab2{grid-template-columns:minmax(0,1fr)}#about .box{overflow:visible}}
+/* first-load animation, once per view */
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+@keyframes draw{from{stroke-dashoffset:var(--len)}}
+@keyframes grow{from{transform:scaleY(0)}}
+@keyframes widen{from{transform:scaleX(0)}}
+@keyframes fade{from{opacity:0}}
+.intro .card{animation:rise .5s cubic-bezier(.2,.7,.2,1) both}
+.intro .row>.card:nth-child(2){animation-delay:.05s}.intro .row>.card:nth-child(3){animation-delay:.1s}.intro .row>.card:nth-child(4){animation-delay:.15s}
+.intro svg .ln{stroke-dasharray:var(--len);animation:draw 1s .15s ease-out both}
+.intro svg .ar{animation:fade .8s .5s both}
+.intro svg .col{transform-box:fill-box;transform-origin:bottom;animation:grow .7s .15s cubic-bezier(.2,.7,.2,1) both}
+.intro .br .t i,.intro .meter i,.intro .split i{transform-origin:left;animation:widen .8s .2s cubic-bezier(.2,.7,.2,1) both}
+.intro .dv .t i.dn{transform-origin:right}
+.intro .spark rect{transform-box:fill-box;transform-origin:bottom;animation:grow .7s .2s both}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="brand"><i aria-hidden="true">VS</i><span>Volunteer Services</span></div>
+  <nav class="tabs" role="tablist" aria-label="Dashboard views">
+    <button role="tab" id="t-overview" data-v="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Overview</button>
+    <button role="tab" id="t-demand" data-v="demand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Demand</button>
+    <button role="tab" id="t-volunteers" data-v="volunteers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.6 2.6 3 5.2"/></svg>Volunteers</button>
+    <button role="tab" id="t-about" data-v="about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg>About</button>
+  </nav>
+  <div class="ctl" data-ctl></div>
+</header>
+<main>
+<!-- ===== OVERVIEW ===== -->
+<section class="view" id="overview" role="tabpanel" aria-labelledby="t-overview">
+  <div class="top"><div class="top" style="flex:1"><h1>Volunteer capacity vs. service demand</h1><span class="period">Sep 2025 – Apr 2026</span>
+    <p class="sub">How can Volunteer Services align volunteer capacity with peak service demand?</p></div></div>
+  <div class="row kpis">
+    <div class="card kpi hero"><div class="k">Volunteer hours contributed</div><div class="v">5,639<small> h</small></div>
+      <div class="d" title="Average uses the 124 volunteers with recorded hours; the count of 132 comes from the 2025–26 tracker"><span class="pill">45.5 h</span>per volunteer · 132 volunteers</div><svg class="spark" id="heroSpark" aria-hidden="true"></svg></div>
+    <div class="card kpi"><div class="k"><span class="ic p-good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span>Retention rate</div>
+      <div class="v">46%</div><div class="d"><span class="pill p-up">▼ 20%</span>at VAP, the lowest program</div></div>
+    <div class="card kpi"><div class="k"><span class="ic p-acc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 9h18l-2 11H5Z"/><path d="M8 9l4-6 4 6"/></svg></span><span id="kHampL">Food hampers distributed</span></div>
+      <div class="v" id="kHamp">661</div><div class="d" id="kHampD"><span class="pill p-acc">110</span>peak month, February</div></div>
+    <div class="card kpi"><div class="k"><span class="ic p-up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11Z"/></svg></span><span id="kHygL">Hygiene products distributed</span></div>
+      <div class="v" id="kHyg">6,042</div><div class="d" id="kHygD"><span class="pill p-up">246 / week</span>peak in October</div></div>
+  </div>
+  <div class="row c2">
+    <div class="card box"><div class="bh"><div><h2 id="ovT">Q Center demand peaks in October and March</h2><p id="ovS">Average daily visits per month. Select a month to filter.</p></div>
+      <div class="seg" id="ovSeg"><button aria-pressed="true" data-v="q">Q Center</button><button aria-pressed="false" data-v="vs">VS Office</button></div></div>
+      <div class="fig"><svg id="ovLine"></svg></div></div>
+    <div class="card box"><div class="bh"><div><h2>ICLF, Q Center and CFB carry most hours</h2><p>Share of volunteer hours by program. Select a program to filter.</p></div></div>
+      <div class="bars" id="ovHours"></div></div>
+  </div>
+  <div class="row c2">
+    <div class="card box nosub"><div class="bh"><div><h2>Key findings</h2><p>What the data says about demand and capacity</p></div></div>
+      <div class="list">
+        <div class="li"><div><strong>Demand follows the academic calendar</strong><span>Q Center peaks in October and March, lowest in December</span></div><span class="pill p-up">111 / day</span></div>
+        <div class="li"><div><strong>Midday is the busiest time</strong><span>12–1 PM is the peak hour; Monday is the busiest day</span></div><span class="pill p-acc">15 / hour</span></div>
+        <div class="li"><div><strong>VAP gets far fewer hours</strong><span>About a third of ICLF's 1,799 h, and the lowest retention</span></div><span class="pill p-good">581 h</span></div>
+      </div></div>
+    <div class="card box rec"><h2>Recommendation</h2>
+      <p class="rhead">Staff for the peaks, not the average</p>
+      <div class="acts">
+        <div class="act"><span class="ai" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><strong>Add midday shifts</strong><span>12–3 PM at the Q Center, starting with Mondays</span></div></div>
+        <div class="act"><span class="ai" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M19 8v6M16 11h6"/></svg></span><div><strong>Recruit before October and March</strong><span>The two busiest months of the year</span></div></div>
+        <div class="act"><span class="ai" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><div><strong>Track volunteer hours by month</strong><span>To check whether staffing follows demand</span></div></div>
+      </div>
+      <p class="note">Avg hours use the 124 volunteers with recorded hours; the volunteer count (132) comes from the 2025–26 tracker.</p></div>
+  </div>
+</section>
+
+<!-- ===== DEMAND ===== -->
+<section class="view" id="demand" role="tabpanel" aria-labelledby="t-demand">
+  <div class="top"><div class="top" style="flex:1"><h1>When are we busiest?</h1><span class="period">Sep 2025 – Apr 2026</span>
+    <p class="sub">Service demand by hour, weekday and month. Select a month in any chart to filter the page.</p></div></div>
+  <div class="row c2e">
+    <div class="card box"><div class="bh"><div><h2 id="dmQT">Q Center visits peak at midday (12–1 PM)</h2><p id="dmQS">Average visits per hour slot</p></div>
+      <div class="seg" id="dmQSeg"><button aria-pressed="true" data-v="hour">By hour</button><button aria-pressed="false" data-v="day">By weekday</button></div></div>
+      <div class="fig"><svg id="dmQ"></svg></div></div>
+    <div class="card box"><div class="bh"><div><h2 id="dvT">Each month vs. the yearly average</h2><p id="dvS">Q Center, average daily visits</p></div>
+      <div class="seg" id="dvSeg"><button aria-pressed="true" data-v="q">Q Center</button><button aria-pressed="false" data-v="vs">VS Office</button><button aria-pressed="false" data-v="lost">Lost items</button></div></div>
+      <div class="leg" style="margin-top:4px"><span><i style="background:var(--up)"></i>Busier than average</span><span><i style="background:var(--down)"></i>Quieter</span></div>
+      <div class="bars dv" id="dv"></div></div>
+  </div>
+  <div class="row c3">
+    <div class="card box"><div class="bh"><div><h2>Hampers up, power packs down after December</h2><p>Food Bank, units per month</p></div></div>
+      <div class="leg" style="margin-top:4px"><span><i style="background:var(--s1)"></i>Food hampers</span><span><i style="background:var(--s2)"></i>Power packs</span></div>
+      <div class="fig"><svg id="dmCFB"></svg></div></div>
+    <div class="card box"><div class="bh"><div><h2>Hygiene demand peaks in October</h2><p id="hygS">Average items per week</p></div></div>
+      <div class="fig"><svg id="dmHyg"></svg></div>
+      <div class="split" id="hygSplit"></div><div class="leg" id="hygLeg" style="margin-top:5px"></div></div>
+    <div class="card box"><div class="bh"><div><h2>Lost item return rate rose from 23% to 36%</h2><p>Items returned ÷ people looking, weekly, ICLF</p></div></div>
+      <div class="fig"><svg id="dmLost"></svg></div></div>
+  </div>
+</section>
+
+<!-- ===== VOLUNTEERS ===== -->
+<section class="view" id="volunteers" role="tabpanel" aria-labelledby="t-volunteers">
+  <div class="top"><div class="top" style="flex:1"><h1>Volunteer retention by program</h1><span class="period">2025–26 volunteers</span>
+    <p class="sub">Who stays, who leaves, and who gives the most. Select a program to filter.</p></div></div>
+  <div class="row kpis">
+    <div class="card kpi hero"><div class="k" id="vhL">Retention rate, all programs</div><div class="v" id="vhV">46%</div>
+      <div class="d" id="vhD"></div><div class="meter"><i id="vhM"></i></div></div>
+    <div class="card kpi"><div class="k"><span class="ic p-good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/></svg></span>Volunteers tracked</div>
+      <div class="v">132</div><div class="d"><span class="pill p-good">61</span>returned for 2026–27</div></div>
+    <div class="card kpi"><div class="k"><span class="ic p-good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg></span>Best retention</div>
+      <div class="v">Q Center</div><div class="d"><span class="pill p-good">60%</span>returned · also most hours each</div></div>
+    <div class="card kpi"><div class="k"><span class="ic p-up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 4 2 20h20Z"/><path d="M12 10v4M12 17h.01"/></svg></span>Biggest loss</div>
+      <div class="v">VAP</div><div class="d"><span class="pill p-up">▲ 80%</span>quit · 12 of 15 volunteers</div></div>
+  </div>
+  <div class="row c2e">
+    <div class="card box"><div class="bh"><div><h2>VAP loses 4 out of 5 volunteers</h2><p>Share who returned vs quit, lowest retention first</p></div>
+      <div class="leg"><span><i style="background:var(--s1)"></i>Returned</span><span><i style="background:var(--grey)"></i>Quit</span></div></div>
+      <div class="bars st" id="vRet"></div></div>
+    <div class="card box"><div class="bh"><div><h2>ICLF and CFB bring in two-thirds of volunteers</h2><p>Volunteers by program, share of 132</p></div></div>
+      <div class="bars" id="vVol"></div></div>
+  </div>
+  <div class="row c2e">
+    <div class="card box nosub"><div class="bh"><div><h2>Q Center volunteers give the most hours each</h2><p>Average hours per volunteer</p></div>
+      <div class="leg"><span><i style="background:var(--grey)"></i>New</span><span><i style="background:var(--s1)"></i>Returning</span></div></div>
+      <div class="bars gr" id="vHours"></div></div>
+    <div class="card box nosub"><div class="bh"><div><h2>What stands out</h2><p>Retention and effort by program</p></div></div>
+      <div class="list" id="vList"></div>
+      <p class="foot">Retention = 2025–26 volunteers who returned in 2026–27 (volunteer tracker).</p></div>
+  </div>
+</section>
+<!-- ===== ABOUT ===== -->
+<section class="view" id="about" role="tabpanel" aria-labelledby="t-about">
+  <div class="top"><div class="top" style="flex:1"><h1>About this project</h1><span class="period">Personal initiative</span>
+    <p class="sub">An independent analysis by Elsa Bakoup of one year of Volunteer Services data, from raw spreadsheets to an interactive dashboard.</p></div></div>
+  <div class="row ab">
+    <div class="card box hero ab-me"><div class="k">Created by</div><div class="who">Elsa Bakoup</div>
+      <p>A personal initiative: I took on this project on my own to practise turning messy operational data into decisions.</p>
+      <p class="disc">Independent student analysis. Not an official Volunteer Services or Students' Union publication.</p></div>
+    <div class="card box"><h2>The question</h2>
+      <p class="q">How can Volunteer Services align volunteer capacity with peak service demand?</p>
+      <ul><li><b>Demand:</b> when are the services busiest, by hour, weekday and month?</li><li><b>Capacity:</b> where do volunteer hours go, and who stays?</li><li><b>Outcome:</b> a staffing recommendation (see Overview).</li></ul></div>
+    <div class="card box"><h2>Tools and method</h2>
+      <ul><li><b>Excel:</b> first look at the raw workbook</li><li><b>SQL:</b> cleaning, monthly and weekly aggregates, KPIs</li><li><b>Power BI:</b> first dashboard, measures and model checks</li><li><b>HTML, CSS, JavaScript:</b> this interactive web version, no chart libraries</li></ul>
+      <p class="mini">Every KPI was checked twice: once in SQL, once as a Power BI measure.</p></div>
+  </div>
+  <div class="row ab ab2">
+    <div class="card box"><h2>Data sources</h2>
+      <ul><li><b>Volunteer list:</b> program, hours, new or returning, status</li><li><b>Volunteer tracker:</b> who returned for 2026–27 (132 volunteers)</li><li><b>Food Bank (CFB):</b> hampers, power packs, people fed, monthly</li><li><b>ICLF:</b> lost items, directions, hygiene products, weekly</li><li><b>Foot traffic:</b> VS Office daily, Q Center hourly</li></ul>
+      <p class="mini">Period: September 2025 to April 2026.</p></div>
+    <div class="card box"><h2>Data cleaning</h2>
+      <ul><li>Fixed ICLF dates: text values and swapped day/month</li><li>Removed a totals row that doubled ICLF sums</li><li>Filtered ICLF to Sep–Apr, like the other sheets</li><li>Fixed typos, stray spaces and program names</li><li>Dropped a duplicate sheet; checked a missing value and a 175 h outlier</li><li>Used daily and weekly averages, since months had 3–5 weeks of data</li></ul></div>
+    <div class="card box"><h2>Limitations</h2>
+      <ul><li>Hours are season totals: staffing can’t be matched to demand month by month</li><li>Retention covers one year only</li><li>Q Center early and late slots: about 100 of 147 days</li><li>VS Office September: 1 day; CFB people fed: Sep–Dec only</li><li>132 volunteers tracked, 124 with recorded hours</li></ul></div>
+  </div>
+</section>
+</main>
+<div id="tip" role="status"></div><div id="toast" role="status"></div>
+
+<script>
+{
+const M=['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
+const MF=['September 2025','October 2025','November 2025','December 2025','January 2026','February 2026','March 2026','April 2026'];
+const D={
+  qMonth:[55.7,111.2,88.9,44.4,75.4,80.8,93.8,59.4],qAvg:79.1,
+  vsMonth:[null,10.0,12.6,9.8,7.4,8.6,7.3,4.7],vsAvg:8.8,
+  qHour:[6.1,8.6,12.2,15.0,13.5,14.6,12.3,10.0],hours:['9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM'],
+  days:['Mon','Tue','Wed','Thu','Fri'],daysF:['Monday','Tuesday','Wednesday','Thursday','Friday'],qDay:[87.0,78.0,80.4,72.8,77.9],
+  hampers:[58,85,94,66,89,110,97,62],packs:[98,72,54,74,17,18,48,52],
+  pads:[62.5,94.0,49.2,70.0,77.5,65.0,67.5,48.8],tampons:[62.5,74.0,40.8,50.0,61.8,65.0,65.0,45.0],condoms:[55.0,78.0,55.0,50.0,75.0,62.5,60.0,57.5],
+  looking:[100.8,119.8,104.2,84.0,88.8,79.0,91.2,67.0],lookAvg:93.0,returned:[23.5,30.6,29.8,20.3,28.0,25.2,31.0,24.0],
+  prog:[{n:'ICLF',vol:44,quit:24,ret:20,hours:1799,hNew:39,hRet:44},{n:'CFB',vol:43,quit:23,ret:20,hours:1521,hNew:45,hRet:42},
+        {n:'Q Center',vol:30,quit:12,ret:18,hours:1739,hNew:60,hRet:59},{n:'VAP',vol:15,quit:12,ret:3,hours:581,hNew:34,hRet:42}]
+};
+D.hyg=M.map((_,i)=>D.pads[i]+D.tampons[i]+D.condoms[i]);
+D.rate=D.returned.map((r,i)=>r/D.looking[i]);
+const S={view:'overview',month:null,prog:null,ov:'q',dq:'hour',dv:'q'};
+const $=id=>document.getElementById(id);
+const fmt=(v,d=0)=>v.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=v=>Math.round(v*100)+'%';
+const tip=$('tip');
+function showTip(e,h){tip.innerHTML=h;tip.style.opacity=1;const r=tip.getBoundingClientRect();let x=e.clientX+14,y=e.clientY-r.height-10;if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y<4)y=e.clientY+16;tip.style.left=x+'px';tip.style.top=y+'px'}
+function hideTip(){tip.style.opacity=0}
+function toast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>el.style.opacity=0,1800)}
+function nice(max){const p=10**Math.floor(Math.log10(max)),n=max/p,s=n<=1.2?.2:n<=2.5?.5:n<=5?1:2;const step=s*p;return{max:Math.ceil(max/step)*step,step}}
+function frame(svg){const W=svg.clientWidth,H=svg.clientHeight,m={l:40,r:10,t:16,b:22};return{W,H,m,pw:W-m.l-m.r,ph:H-m.t-m.b}}
+function yAxis(f,max,step,fm){let s='';for(let v=0;v<=max+1e-9;v+=step){const y=f.m.t+f.ph-(v/max)*f.ph;s+=`<line x1="${f.m.l}" x2="${f.W-f.m.r}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${f.m.l-7}" y="${y+4}" text-anchor="end">${fm(v)}</text>`}return s}
+const draws={};
+function plot(id,fn){const el=$(id);draws[id]=()=>{if(el.offsetParent!==null&&el.clientWidth)fn(el)};if(el.tagName==='svg')new ResizeObserver(draws[id]).observe(el)}
+function redraw(){Object.values(draws).forEach(f=>f())}
+function hits(svg,n,f,onMove,onClick){let s='';const bw=f.pw/n;for(let i=0;i<n;i++)s+=`<rect data-i="${i}" x="${f.m.l+bw*i}" y="${f.m.t}" width="${bw}" height="${f.ph+f.m.b}" fill="transparent" style="cursor:${onClick?'pointer':'default'}"/>`;
+  svg.insertAdjacentHTML('beforeend',s);svg.querySelectorAll('[data-i]').forEach(h=>{const i=+h.dataset.i;h.onpointermove=e=>onMove(i,e);h.onpointerleave=hideTip;if(onClick)h.onclick=()=>onClick(i)})}
+function axLab(l,i,bw,sel){if(sel===i)return l;if(sel!=null&&Math.abs(i-sel)===1&&bw<36)return '';if(bw<44&&l.includes(' '))l=l.split(' ')[0];if(bw<30)return i%2?'':l;return l}
+function selMonth(i){S.month=S.month===i?null:i;update()}
+function selProg(n){S.prog=S.prog===n?null:n;update()}
+
+/* area / line chart; sel = selected index; series [{v,c,area}] */
+function line(svg,{labels,series,fm,sel,ends=true}){
+  const f=frame(svg),all=series.flatMap(s=>s.v).filter(v=>v!=null),{max,step}=nice(Math.max(...all)*1.12);
+  const n=labels.length,bw=f.pw/n,x=i=>f.m.l+bw*(i+.5),y=v=>f.m.t+f.ph-(v/max)*f.ph;
+  let s=`<defs><linearGradient id="g${svg.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--s1)" stop-opacity=".22"/><stop offset="1" stop-color="var(--s1)" stop-opacity="0"/></linearGradient></defs>`+yAxis(f,max,step,fm);
+  if(sel!=null)s+=`<line x1="${x(sel)}" x2="${x(sel)}" y1="${f.m.t}" y2="${f.m.t+f.ph}" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
+  labels.forEach((l,i)=>s+=`<text x="${x(i)}" y="${f.H-5}" text-anchor="middle" ${sel===i?'class="lab"':''}>${axLab(l,i,bw,sel)}</text>`);
+  series.forEach(se=>{const pts=se.v.map((v,i)=>v==null?null:[x(i),y(v)]).filter(Boolean),P=pts.map(p=>p.map(q=>q.toFixed(1)).join(',')).join(' L');
+    if(se.area)s+=`<path class="ar" d="M${pts[0][0]},${f.m.t+f.ph} L${P} L${pts[pts.length-1][0]},${f.m.t+f.ph}Z" fill="url(#g${svg.id})"/>`;
+    s+=`<path class="ln" d="M${P}" fill="none" stroke="${se.c}" stroke-width="2.25" stroke-linejoin="round"/>`;
+    const vals=se.v.filter(v=>v!=null),mx=Math.max(...vals),mn=Math.min(...vals);
+    se.v.forEach((v,i)=>{if(v==null)return;const on=sel===i,big=on||(ends&&series.length===1&&(v===mx||v===mn));
+      s+=`<circle cx="${x(i)}" cy="${y(v)}" r="${on?6:4}" fill="${se.c}" stroke="var(--surface)" stroke-width="2"/>`;
+      if(series.length===1&&big)s+=`<text class="lab" x="${x(i)}" y="${v===mn&&!on?y(v)+19:y(v)-11}" text-anchor="middle">${fm(v,1)}</text>`})});
+  svg.innerHTML=s;svg.querySelectorAll('.ln').forEach(l=>l.style.setProperty('--len',Math.ceil(l.getTotalLength())));return f}
+/* vertical columns; hl index emphasised, others full */
+function cols(svg,{labels,v,c,fm,sel,peak=true}){
+  const f=frame(svg),{max,step}=nice(Math.max(...v)*1.14),n=labels.length,bw=f.pw/n,w=Math.min(bw*.6,48),y=x=>f.m.t+f.ph-(x/max)*f.ph,mx=Math.max(...v);
+  let s=yAxis(f,max,step,fm);
+  v.forEach((x,i)=>{const x0=f.m.l+bw*i+(bw-w)/2,y0=y(x),h=f.m.t+f.ph-y0,r=Math.min(4,w/2,h),dim=sel!=null&&sel!==i;
+    s+=`<path class="col" d="M${x0},${y0+h}V${y0+r}Q${x0},${y0} ${x0+r},${y0}H${x0+w-r}Q${x0+w},${y0} ${x0+w},${y0+r}V${y0+h}Z" fill="${c}" opacity="${dim?.3:1}"/>`;
+    if(sel===i||(sel==null&&peak&&x===mx))s+=`<text class="lab" x="${x0+w/2}" y="${y0-6}" text-anchor="middle">${fm(x,1)}</text>`;
+    s+=`<text x="${f.m.l+bw*(i+.5)}" y="${f.H-5}" text-anchor="middle" ${sel===i?'class="lab"':''}>${axLab(labels[i],i,bw,sel)}</text>`});
+  svg.innerHTML=s;return f}
+
+/* ---------- controls (shared header) ---------- */
+const ICON={moon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>'};
+document.querySelectorAll('[data-ctl]').forEach(c=>{c.innerHTML=`<button class="btn chip" data-clr="month" hidden></button><button class="btn chip" data-clr="prog" hidden></button>
+  <button class="btn" data-act="theme">${ICON.moon}<span>Dark mode</span></button><button class="btn pri" data-act="share" aria-label="Share view">${ICON.link}<span>Share view</span></button>`});
+document.querySelectorAll('[data-clr]').forEach(b=>b.onclick=()=>{S[b.dataset.clr]=null;update()});
+const root=document.documentElement;
+function isDark(){return root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches}
+function setTheme(t){root.dataset.theme=t;try{localStorage.setItem('vs-theme',t)}catch(e){}document.querySelectorAll('[data-act=theme] span').forEach(s=>s.textContent=t==='dark'?'Light mode':'Dark mode');document.querySelectorAll('[data-act=theme]').forEach(b=>b.setAttribute('aria-label',t==='dark'?'Light mode':'Dark mode'));redraw()}
+try{const t=localStorage.getItem('vs-theme');if(t)root.dataset.theme=t}catch(e){}
+document.querySelectorAll('[data-act=theme]').forEach(b=>b.onclick=()=>setTheme(isDark()?'light':'dark'));
+document.querySelectorAll('[data-act=share]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('Link to this view copied')}catch(e){toast('Copy the address bar to share this view')}});
+
+/* ---------- OVERVIEW ---------- */
+plot('heroSpark',svg=>{const W=svg.clientWidth,H=svg.clientHeight,v=D.prog.map(p=>p.hours),mx=Math.max(...v),bw=W/v.length;
+  svg.innerHTML=v.map((x,i)=>{const h=(x/mx)*(H-16),dim=S.prog&&S.prog!==D.prog[i].n;return`<rect x="${i*bw+bw*.2}" y="${H-14-h}" width="${bw*.6}" height="${h}" rx="2" fill="var(--lime)" opacity="${dim?.3:1}"/>${bw>26?`<text x="${i*bw+bw/2}" y="${H-2}" text-anchor="middle" style="fill:#cfe3ea;font-size:10px">${D.prog[i].n==='Q Center'?'QC':D.prog[i].n}</text>`:''}`}).join('')});
+plot('ovLine',svg=>{const q=S.ov==='q',v=q?D.qMonth:D.vsMonth;
+  const f=line(svg,{labels:M,series:[{v,c:'var(--s1)',area:true}],fm:(x,d)=>fmt(x,d&&!q?1:0),sel:S.month});
+  hits(svg,8,f,(i,e)=>showTip(e,v[i]==null?`<b>${MF[i]}</b>1 day recorded, excluded`:`<b>${MF[i]}</b>${fmt(v[i],1)} visits per day`),selMonth)});
+draws.ovHours=()=>{const tot=D.prog.reduce((a,p)=>a+p.hours,0),ps=[...D.prog].sort((a,b)=>b.hours-a.hours),cs=['var(--q1)','var(--q2)','var(--q3)','var(--q4)'];
+  $('ovHours').innerHTML=ps.map((p,i)=>`<button class="br ${S.prog&&S.prog!==p.n?'dim':''}" data-p="${p.n}"><span>${p.n}</span><span class="t"><i style="width:${p.hours/ps[0].hours*100}%;background:${cs[i]}"></i></span><b>${pct(p.hours/tot)}</b></button>`).join('');
+  $('ovHours').querySelectorAll('[data-p]').forEach(b=>{const p=D.prog.find(x=>x.n===b.dataset.p);b.onclick=()=>selProg(p.n);b.onpointermove=e=>showTip(e,`<b>${p.n}</b>${fmt(p.hours)} h · ${p.vol} volunteers`);b.onpointerleave=hideTip})};
+function ovKpis(){const m=S.month;
+  if(m==null){$('kHampL').textContent='Food hampers distributed';$('kHamp').textContent='661';$('kHampD').innerHTML='<span class="pill p-acc">110</span>peak month, February';
+    $('kHygL').textContent='Hygiene products distributed';$('kHyg').textContent='6,042';$('kHygD').innerHTML='<span class="pill p-up">246 / week</span>peak in October'}
+  else{const mh=D.hampers[m],avgH=661/8,dh=(mh-avgH)/avgH,hy=D.hyg[m],avgY=6042/32,dy=(hy-avgY)/avgY;
+    $('kHampL').textContent='Food hampers, '+MF[m];$('kHamp').textContent=mh;$('kHampD').innerHTML=`<span class="pill ${dh>=0?'p-up':'p-good'}">${dh>=0?'▲':'▼'} ${pct(Math.abs(dh))}</span>vs monthly average (83)`;
+    $('kHygL').textContent='Hygiene products, '+MF[m];$('kHyg').innerHTML=`${fmt(hy)}<small> / week</small>`;$('kHygD').innerHTML=`<span class="pill ${dy>=0?'p-up':'p-good'}">${dy>=0?'▲':'▼'} ${pct(Math.abs(dy))}</span>vs weekly average (189)`}}
+function seg(id,key,after){const el=$(id);el.querySelectorAll('button').forEach(b=>b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));S[key]=b.dataset.v;after&&after();update()})}
+seg('ovSeg','ov',()=>{const q=S.ov==='q';$('ovT').textContent=q?'Q Center demand peaks in October and March':'VS Office visits peak in November, then fall';
+  $('ovS').textContent=(q?'Average daily visits per month.':'Average daily visits per month; September excluded (1 day of data).')+' Select a month to filter.'});
+
+/* ---------- DEMAND ---------- */
+plot('dmQ',svg=>{const h=S.dq==='hour',labels=h?D.hours:D.days,v=h?D.qHour:D.qDay;
+  const f=cols(svg,{labels,v,c:'var(--s1)',fm:(x,d)=>fmt(x,d&&h?1:0)});
+  hits(svg,labels.length,f,(i,e)=>showTip(e,h?`<b>${D.hours[i]}–${i<7?D.hours[i+1]:'5 PM'}</b>${fmt(v[i],1)} visits on average`:`<b>${D.daysF[i]}</b>${fmt(v[i],1)} visits per day`))});
+seg('dmQSeg','dq',()=>{const h=S.dq==='hour';$('dmQT').textContent=h?'Q Center visits peak at midday (12–1 PM)':'Mondays are the busiest day at the Q Center';
+  $('dmQS').textContent=h?'Average visits per hour slot':'Average visits per day · VS Office also peaks Monday (11.7/day)'});
+draws.dv=()=>{const k=S.dv,v=k==='q'?D.qMonth:k==='vs'?D.vsMonth:D.looking,avg=k==='q'?D.qAvg:k==='vs'?D.vsAvg:D.lookAvg;
+  const dev=v.map(x=>x==null?null:(x-avg)/avg),mx=Math.max(...dev.filter(x=>x!=null).map(Math.abs));
+  $('dv').innerHTML=M.map((m,i)=>{const d=dev[i];if(d==null)return`<button class="br" disabled style="cursor:default"><span>${m}</span><span class="t"></span><b style="color:var(--muted);font-weight:500">n/a</b></button>`;
+    const w=Math.abs(d)/mx*48,up=d>=0;return`<button class="br ${S.month!=null&&S.month!==i?'dim':''}" data-i="${i}"><span>${m}</span><span class="t"><i class="${up?'':'dn'}" style="width:${w}%;${up?'left:50%':'right:50%'};background:var(${up?'--up':'--down'});border-radius:${up?'0 99px 99px 0':'99px 0 0 99px'}"></i></span><b class="lbl" style="color:var(${up?'--upink':'--downink'})">${up?'+':'−'}${pct(Math.abs(d))}</b></button>`}).join('');
+  $('dv').querySelectorAll('[data-i]').forEach(b=>{const i=+b.dataset.i;b.onclick=()=>selMonth(i);b.onpointermove=e=>showTip(e,`<b>${MF[i]}</b>${fmt(v[i],1)} vs average ${fmt(avg,1)}`);b.onpointerleave=hideTip})};
+seg('dvSeg','dv',()=>{const k=S.dv;$('dvS').textContent=k==='q'?'Q Center, average daily visits (average 79.1)':k==='vs'?'VS Office, average daily visits (average 8.8); September n/a':'ICLF, people looking for lost items per week (average 93)'});
+plot('dmCFB',svg=>{const f=line(svg,{labels:M,series:[{v:D.hampers,c:'var(--s1)'},{v:D.packs,c:'var(--s2)'}],fm:x=>fmt(x),sel:S.month});
+  hits(svg,8,f,(i,e)=>showTip(e,`<b>${MF[i]}</b>Food hampers: ${D.hampers[i]}<br>Power packs: ${D.packs[i]}`),selMonth)});
+plot('dmHyg',svg=>{const f=cols(svg,{labels:M,v:D.hyg,c:'var(--s1)',fm:(x,d)=>fmt(x),sel:S.month});
+  hits(svg,8,f,(i,e)=>showTip(e,`<b>${MF[i]}</b>${fmt(D.hyg[i])} items per week`),selMonth)});
+draws.hyg=()=>{const m=S.month,p=m==null?[2162,1880,2000]:[D.pads[m],D.tampons[m],D.condoms[m]],t=p[0]+p[1]+p[2],cs=['var(--q1)','var(--q3)','var(--q4)'],n=['Pads','Tampons','Condoms'];
+  $('hygS').textContent=m==null?'Average items per week; split below is the whole period':`Average items per week; split below is ${MF[m]}`;
+  $('hygSplit').innerHTML=p.map((x,i)=>`<i style="flex:${x};background:${cs[i]}"></i>`).join('');
+  $('hygLeg').innerHTML=p.map((x,i)=>`<span><i style="background:${cs[i]}"></i>${n[i]} ${pct(x/t)}</span>`).join('')};
+plot('dmLost',svg=>{const f=line(svg,{labels:M,series:[{v:D.rate,c:'var(--s1)',area:true}],fm:x=>pct(x),sel:S.month});
+  hits(svg,8,f,(i,e)=>showTip(e,`<b>${MF[i]}</b>${pct(D.rate[i])} returned<br>${fmt(D.returned[i],1)} returned ÷ ${fmt(D.looking[i],1)} looking per week`),selMonth)});
+
+/* ---------- VOLUNTEERS ---------- */
+function progRows(id,html,tipf){$(id).innerHTML=html;$(id).querySelectorAll('[data-p]').forEach(b=>{const p=D.prog.find(x=>x.n===b.dataset.p);b.onclick=()=>selProg(p.n);b.onpointermove=e=>showTip(e,tipf(p));b.onpointerleave=hideTip})}
+const dimP=n=>S.prog&&S.prog!==n?'dim':'';
+draws.vRet=()=>{const ps=[...D.prog].sort((a,b)=>a.ret/(a.ret+a.quit)-b.ret/(b.ret+b.quit));
+  progRows('vRet',ps.map(p=>{const t=p.ret+p.quit,r=p.ret/t;return`<button class="br ${dimP(p.n)}" data-p="${p.n}" style="grid-template-columns:minmax(64px,.5fr) minmax(0,2.2fr) 52px"><span>${p.n}</span><span class="t"><i style="flex:${r};background:var(--s1)">${pct(r)}</i><i style="flex:${1-r};background:var(--grey);color:var(--greyink)">${pct(1-r)}</i></span><b>${t}</b></button>`}).join(''),
+    p=>`<b>${p.n}</b>${p.ret} returned · ${p.quit} quit`)};
+draws.vVol=()=>{const cs=['var(--q1)','var(--q2)','var(--q3)','var(--q4)'];
+  progRows('vVol',D.prog.map((p,i)=>`<button class="br ${dimP(p.n)}" data-p="${p.n}" style="grid-template-columns:minmax(64px,.6fr) minmax(0,2fr) 76px"><span>${p.n}</span><span class="t"><i style="width:${p.vol/44*100}%;background:${cs[i]}"></i></span><b style="white-space:nowrap">${p.vol} · ${pct(p.vol/132)}</b></button>`).join(''),p=>`<b>${p.n}</b>${p.vol} volunteers`)};
+draws.vHours=()=>{progRows('vHours',D.prog.map(p=>`<button class="br ${dimP(p.n)}" data-p="${p.n}"><span>${p.n}</span><span class="t"><i style="width:${p.hNew/60*100}%;background:var(--grey)"></i><i style="width:${p.hRet/60*100}%;background:var(--s1)"></i></span><b>${p.hNew} h<br>${p.hRet} h</b></button>`).join(''),
+  p=>`<b>${p.n}</b>New: ${p.hNew} h · Returning: ${p.hRet} h`)};
+draws.vHero=()=>{const p=D.prog.find(x=>x.n===S.prog),r=p?p.ret:61,t=p?p.ret+p.quit:132,v=r/t;
+  $('vhL').textContent='Retention rate, '+(p?p.n:'all programs');$('vhV').textContent=pct(v);
+  $('vhD').innerHTML=`<span class="pill">${r} of ${t}</span>${p?`returned · overall 46%`:'2025–26 volunteers returned'}`;$('vhM').style.width=v*100+'%'};
+draws.vList=()=>{const L=[['Q Center','Fewest volunteers, most effort','60% stay','p-good'],['VAP','Lowest retention and fewest hours','80% quit','p-up'],['ICLF and CFB','Most volunteers, retention below average','45–47%','p-acc']];
+  $('vList').innerHTML=L.map(l=>`<div class="li"><div><strong>${l[0]}</strong><span>${l[1]}</span></div><span class="pill ${l[3]}">${l[2]}</span></div>`).join('')};
+
+/* ---------- state, views ---------- */
+function update(){document.querySelectorAll('[data-clr=month]').forEach(b=>{b.hidden=S.month==null||S.view==='volunteers'||S.view==='about';if(S.month!=null)b.innerHTML=`<span>Month: </span>${M[S.month]} ${ICON.x}`});
+  document.querySelectorAll('[data-clr=prog]').forEach(b=>{b.hidden=!S.prog||S.view==='demand'||S.view==='about';if(S.prog)b.innerHTML=`<span>Program: </span>${S.prog} ${ICON.x}`});
+  ovKpis();hideTip();redraw()}
+const views=['overview','demand','volunteers','about'];const seen=new Set();
+function show(v){if(!views.includes(v))v='overview';S.view=v;views.forEach(x=>{$(x).classList.toggle('on',x===v);const b=$('t-'+x);b.setAttribute('aria-selected',x===v);b.tabIndex=x===v?0:-1});requestAnimationFrame(update);if(!seen.has(v)){seen.add(v);const el=$(v);el.classList.add('intro');setTimeout(()=>el.classList.remove('intro'),1400)}}
+document.querySelectorAll('.tabs button').forEach(b=>{b.onclick=()=>{location.hash=b.dataset.v;show(b.dataset.v)};
+  b.onkeydown=e=>{if(!['ArrowRight','ArrowLeft'].includes(e.key))return;e.preventDefault();const i=(views.indexOf(b.dataset.v)+(e.key==='ArrowRight'?1:views.length-1))%views.length;$('t-'+views[i]).focus();$('t-'+views[i]).click()}});
+addEventListener('hashchange',()=>show(location.hash.slice(1)));
+addEventListener('keydown',e=>{if(e.key==='Escape'&&(S.month!=null||S.prog)){S.month=null;S.prog=null;update()}});
+new MutationObserver(redraw).observe(root,{attributes:true,attributeFilter:['data-theme']});
+document.querySelectorAll('[data-act=theme] span').forEach(s=>s.textContent=isDark()?'Light mode':'Dark mode');
+show(location.hash.slice(1));
+}
+</script>
+</body>
+</html>
