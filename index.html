@@ -87,7 +87,7 @@ h1 span{font-weight:700}
 .p-up{background:var(--tagup);color:var(--tagupink)}.p-good{background:var(--taggood);color:var(--taggoodink)}.p-acc{background:var(--tagn);color:var(--tagnink)}
 .hero{background:var(--hero);color:#fff;border:0}
 .hero .k,.hero .d{color:#cfe3ea}.hero .v small{color:#a9cbd7}.hero .pill{background:var(--lime);color:#0d1214}
-.hero svg.spark{position:absolute;right:16px;top:14px;width:38%;height:52%}
+.hero svg.spark{position:absolute;right:16px;top:14px;width:38%;height:52%;cursor:pointer}.spark .hit:focus{outline:none}.spark .hit:focus-visible{outline:2px solid var(--lime)}
 .box{padding:12px 16px 10px;display:flex;flex-direction:column;min-height:0}
 .bh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
 .bh h2{font-size:15px;margin:0;font-weight:700;line-height:1.25}
@@ -435,8 +435,8 @@ const D={
   hampers:[58,85,94,66,89,110,97,62],packs:[98,72,54,74,17,18,48,52],
   pads:[62.5,94.0,49.2,70.0,77.5,65.0,67.5,48.8],tampons:[62.5,74.0,40.8,50.0,61.8,65.0,65.0,45.0],condoms:[55.0,78.0,55.0,50.0,75.0,62.5,60.0,57.5],
   looking:[100.8,119.8,104.2,84.0,88.8,79.0,91.2,67.0],lookAvg:93.0,returned:[23.5,30.6,29.8,20.3,28.0,25.2,31.0,24.0],
-  prog:[{n:'ICLF',vol:44,quit:24,ret:20,hours:1799,hNew:39,hRet:44},{n:'CFB',vol:43,quit:23,ret:20,hours:1521,hNew:45,hRet:42},
-        {n:'Q Center',vol:30,quit:12,ret:18,hours:1739,hNew:60,hRet:59},{n:'AVP',vol:15,quit:12,ret:3,hours:581,hNew:34,hRet:42}]
+  prog:[{n:'ICLF',vol:44,quit:24,ret:20,hours:1799,hAvg:40.9,hNew:39,hRet:44},{n:'CFB',vol:43,quit:23,ret:20,hours:1521,hAvg:43.5,hNew:45,hRet:42},
+        {n:'Q Center',vol:30,quit:12,ret:18,hours:1739,hAvg:60.0,hNew:60,hRet:59},{n:'AVP',vol:15,quit:12,ret:3,hours:581,hAvg:36.3,hNew:34,hRet:42}]
 };
 D.hyg=M.map((_,i)=>D.pads[i]+D.tampons[i]+D.condoms[i]);
 D.rate=D.returned.map((r,i)=>r/D.looking[i]);
@@ -501,8 +501,14 @@ document.querySelectorAll('[data-act=theme]').forEach(b=>b.onclick=()=>setTheme(
 document.querySelectorAll('[data-act=share]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('Link to this view copied')}catch(e){toast('Copy the address bar to share this view')}});
 
 /* ---------- OVERVIEW ---------- */
-plot('heroSpark',svg=>{const W=svg.clientWidth,H=svg.clientHeight,v=D.prog.map(p=>p.hours),mx=Math.max(...v),bw=W/v.length;
-  svg.innerHTML=v.map((x,i)=>{const h=(x/mx)*(H-16),dim=S.prog&&S.prog!==D.prog[i].n;return`<rect x="${i*bw+bw*.2}" y="${H-14-h}" width="${bw*.6}" height="${h}" rx="2" fill="var(--lime)" opacity="${dim?.3:1}"/>${bw>26?`<text x="${i*bw+bw/2}" y="${H-2}" text-anchor="middle" style="fill:#cfe3ea;font-size:10px">${D.prog[i].n==='Q Center'?'QC':D.prog[i].n}</text>`:''}`}).join('')});
+plot('heroSpark',svg=>{const W=svg.clientWidth,H=svg.clientHeight,v=D.prog.map(p=>p.hours),mx=Math.max(...v),tot=v.reduce((a,b)=>a+b,0),bw=W/v.length;
+  svg.innerHTML=v.map((x,i)=>{const p=D.prog[i],h=(x/mx)*(H-16),dim=S.prog&&S.prog!==p.n;return`<rect x="${i*bw+bw*.2}" y="${H-14-h}" width="${bw*.6}" height="${h}" rx="2" fill="var(--lime)" opacity="${dim?.3:1}"/>${bw>26?`<text x="${i*bw+bw/2}" y="${H-2}" text-anchor="middle" style="fill:#cfe3ea;font-size:10px">${p.n==='Q Center'?'QC':p.n}</text>`:''}<rect class="hit" data-i="${i}" x="${i*bw}" y="0" width="${bw}" height="${H}" fill="transparent" tabindex="0" role="button" aria-label="${p.n}: ${fmt(x)} hours, ${pct(x/tot)} of all hours"/>`}).join('');
+  svg.querySelectorAll('.hit').forEach(r=>{const i=+r.dataset.i,p=D.prog[i],x=v[i];
+    const html=`<b>${p.n}</b><span style="opacity:.75">${FULL[p.n]}</span><br>${fmt(x)} h · ${pct(x/tot)} of all hours<br>${fmt(p.hAvg,1)} h per volunteer · ${pct(p.ret/(p.ret+p.quit))} retention`;
+    r.onpointermove=e=>{showTip(e,html);svg.querySelectorAll('rect:not(.hit)').forEach((b,j)=>b.style.opacity=j===i?1:.35)};
+    r.onpointerleave=()=>{hideTip();draws.heroSpark()};
+    r.onfocus=()=>{const b=r.getBoundingClientRect();showTip({clientX:b.left+b.width/2,clientY:b.top},html)};r.onblur=hideTip;
+    r.onclick=()=>selProg(p.n);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selProg(p.n)}}})});
 plot('ovLine',svg=>{const q=S.ov==='q',v=q?D.qMonth:D.vsMonth;
   const f=line(svg,{labels:M,series:[{v,c:'var(--s1)',area:true}],fm:(x,d)=>fmt(x,d&&!q?1:0),sel:S.month});
   hits(svg,8,f,(i,e)=>showTip(e,v[i]==null?`<b>${MF[i]}</b>1 day recorded, excluded`:`<b>${MF[i]}</b>${fmt(v[i],1)} visits per day`),selMonth)});
