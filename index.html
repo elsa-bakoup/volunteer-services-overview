@@ -11,12 +11,14 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="Volunteer capacity vs. service demand">
 <meta property="og:description" content="When are volunteer services busiest, and who stays? An interactive dashboard built with SQL and Power BI. Personal project by Elsa Bakoup.">
-<meta property="og:image" content="og-image.png">
+<meta property="og:url" content="https://elsa-bakoup.github.io/volunteer-services-overview/">
+<meta property="og:image" content="https://elsa-bakoup.github.io/volunteer-services-overview/og-image.png">
+<link rel="canonical" href="https://elsa-bakoup.github.io/volunteer-services-overview/">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Volunteer capacity vs. service demand">
 <meta name="twitter:description" content="Interactive dashboard · personal data project by Elsa Bakoup">
-<meta name="twitter:image" content="og-image.png">
+<meta name="twitter:image" content="https://elsa-bakoup.github.io/volunteer-services-overview/og-image.png">
 <meta name="theme-color" content="#003d4d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -569,7 +571,7 @@ function update(){document.querySelectorAll('[data-clr=month]').forEach(b=>{b.hi
   document.querySelectorAll('[data-clr=prog]').forEach(b=>{b.hidden=!S.prog||S.view==='demand'||S.view==='about';if(S.prog)b.innerHTML=`<span>Program: </span>${S.prog} ${ICON.x}`});
   ovKpis();hideTip();redraw()}
 const views=['overview','demand','volunteers','about'];const seen=new Set();
-function show(v){if(!views.includes(v))v='overview';S.view=v;views.forEach(x=>{$(x).classList.toggle('on',x===v);const b=$('t-'+x);b.setAttribute('aria-selected',x===v);b.tabIndex=x===v?0:-1});requestAnimationFrame(update);if(!seen.has(v)){seen.add(v);const el=$(v);el.classList.add('intro');setTimeout(()=>el.classList.remove('intro'),1400)}}
+function show(v){if(!views.includes(v))v='overview';S.view=v;views.forEach(x=>{$(x).classList.toggle('on',x===v);const b=$('t-'+x);b.setAttribute('aria-selected',x===v);b.tabIndex=x===v?0:-1});requestAnimationFrame(update);const el=$(v);clearTimeout(show.t);views.forEach(x=>$(x).classList.remove('intro'));void el.offsetWidth;el.classList.add('intro');show.t=setTimeout(()=>el.classList.remove('intro'),1400)}
 document.querySelectorAll('.tabs button').forEach(b=>{b.onclick=()=>{location.hash=b.dataset.v;show(b.dataset.v)};
   b.onkeydown=e=>{if(!['ArrowRight','ArrowLeft'].includes(e.key))return;e.preventDefault();const i=(views.indexOf(b.dataset.v)+(e.key==='ArrowRight'?1:views.length-1))%views.length;$('t-'+views[i]).focus();$('t-'+views[i]).click()}});
 addEventListener('hashchange',()=>show(location.hash.slice(1)));
